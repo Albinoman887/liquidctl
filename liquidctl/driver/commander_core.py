@@ -142,7 +142,7 @@ class CommanderCore(UsbHidDriver):
         raise NotSupportedByDriver
 
     def set_speed_profile(self, channel, profile, **kwargs):
-        channels = CommanderCore._parse_channels(channel)
+        channels = self._parse_channels(channel)
 
         # TODO format the data for the commander core
         print(list(profile))
