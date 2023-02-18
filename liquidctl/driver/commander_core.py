@@ -144,8 +144,12 @@ class CommanderCore(UsbHidDriver):
     def set_speed_profile(self, channel, profile, **kwargs):
         channels = CommanderCore._parse_channels(channel)
 
-        # TODO format the data for the commander core
-        print(list(profile))
+        # Format the curve data
+        fan_count = len(channels)
+        curve_data = bytearray([0x00, 0x00, fan_count])
+        for speed, temp in profile:
+            curve_data.append(int(clamp(speed, 0, 100)))
+            curve_data.append(int(clamp(temp, 0, 100)))
 
         with self._wake_device_context():
             # Set hardware speed mode
@@ -170,8 +174,17 @@ class CommanderCore(UsbHidDriver):
                 data_by_device.append(res[start:end])
 
             # Modify the correct channels
-            # TODO modify data for channels in channels array
+            for data in data_by_device:
+                channel_number = data[0] - 1
+                if channel_number in channels:
+                    # Find the index of the current channel in the list of channels
+                    idx = channels.index(channel_number)
+                    # Modify the speed and temp values for the channel
+                    curve_data_idx = 2 + 2 * idx
+                    data[curve_data_idx] = curve_data[curve_data_idx]
+                    data[curve_data_idx + 1] = curve_data[curve_data_idx + 1]
 
+            # Combine the modified data for each device into a single byte array
             out = bytes([device_count]) + b''.join(data_by_device)
             self._write_data(_MODE_HW_CURVE_PERCENT, _DATA_TYPE_HW_CURVE_PERCENT, out)
 
